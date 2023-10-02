@@ -12,6 +12,11 @@ from sklearn.preprocessing import RobustScaler , MinMaxScaler, StandardScaler
 df = pd.read_csv("C:/Users/Lucas/Downloads/archive/dataset_olympics.csv",sep=",",encoding="utf-8")
 df_country = pd.read_csv("C:/Users/Lucas/Downloads/archive/noc_region.csv",sep=",",encoding="utf-8")
 
+
+kkkkk
+
+
+
 #Vu 'rapide' des données
 df.sample(10)
 df_country.sample(10)
