@@ -7,21 +7,45 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import RobustScaler , MinMaxScaler, StandardScaler
 
 #%%Info
+
+#Import des données
 df = pd.read_csv("C:/Users/Lucas/Downloads/archive/dataset_olympics.csv",sep=",",encoding="utf-8")
 df_country = pd.read_csv("C:/Users/Lucas/Downloads/archive/noc_region.csv",sep=",",encoding="utf-8")
 
+#Vu 'rapide' des données
 df.sample(10)
 df_country.sample(10)
 
-df.info()
-df_country.info()
+#On regarde les différents sports possibles
+df['Sport'].unique()
+
+#On regarde le nb d'observations pour chaque sport
+df['Sport']
+df['Sport'].value_counts()[0:10]
+
+#On regarde le nb de médailles par Année
+df['Year'].value_counts().sort_index()
+df['Year'].value_counts().sort_index().loc[19922016] #Ca fait deja 30735 observations
+
+#Par exemple ici on prend les medailles en Judo
+judo_data = df[df['Sport'] == 'Judo']
+judo_data
+
 
 #%%traitement
+#On copie la BDD
 data=df.copy()
 
+#On retire les doublons
 data.drop_duplicates(inplace=True)
 
+#On regarde les valeurs manquantes
 df.isnull().sum()
+
+#
+plot(data['Age'])
+data['Age'].max()
+data[data['Age']==88]['Sport']
 
 sns.kdeplot(data=data,x="Age",shade=True)
 
