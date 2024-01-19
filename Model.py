@@ -1,5 +1,4 @@
 import pandas as pd
-#import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -8,6 +7,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score, classification_report
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import GridSearchCV
+import joblib
 
 # Import des données
 df = pd.read_csv("C:/Users/Lucas/Downloads/archive/dataset_olympics.csv", sep=",", encoding="utf-8")
@@ -57,12 +57,8 @@ grid_search.fit(X_train_scaled, y_train)
 best_logistic_model = grid_search.best_estimator_
 best_logistic_model.fit(X_train_scaled, y_train)
 
-# Faire des prédictions sur l'ensemble de test
-y_pred_logistic = best_logistic_model.predict(X_test_scaled)
-
-# Évaluer les performances du modèle de régression logistique
-accuracy_logistic = accuracy_score(y_test, y_pred_logistic)
-classification_rep_logistic = classification_report(y_test, y_pred_logistic)
+# Sauvegarder le modèle de régression logistique
+joblib.dump(best_logistic_model, 'best_logistic_model.pkl')
 
 # Initialiser le modèle basé sur les arbres de décision
 rf_model = RandomForestClassifier(random_state=42)
@@ -77,10 +73,17 @@ grid_search_rf.fit(X_train_scaled, y_train)
 best_rf_model = grid_search_rf.best_estimator_
 best_rf_model.fit(X_train_scaled, y_train)
 
+# Sauvegarder le modèle de forêt aléatoire
+joblib.dump(best_rf_model, 'best_rf_model.pkl')
+
 # Faire des prédictions sur l'ensemble de test
+y_pred_logistic = best_logistic_model.predict(X_test_scaled)
 y_pred_rf = best_rf_model.predict(X_test_scaled)
 
-# Évaluer les performances du modèle de forêt aléatoire
+# Évaluer les performances des modèles
+accuracy_logistic = accuracy_score(y_test, y_pred_logistic)
+classification_rep_logistic = classification_report(y_test, y_pred_logistic)
+
 accuracy_rf = accuracy_score(y_test, y_pred_rf)
 classification_rep_rf = classification_report(y_test, y_pred_rf)
 

@@ -9,10 +9,13 @@ import joblib
 
 
 ########## Charger le modèle et le scaler ########
-model = joblib.load('medal_prediction_model.pkl')
-scaler = joblib.load('medal_prediction_scaler.pkl')
+# Import du modèle de régression logistique
+best_lr_model = joblib.load('best_logistic_model.pkl')
 
+# Import du modèle Random Forest
+best_rf_model = joblib.load('best_rf_model.pkl')
 
+    
 
 ##########  Pré-traitement  ##########
 #Import des données
@@ -161,18 +164,14 @@ page1_layout = html.Div(style={'backgroundColor': '#f2f2f2'}, children=[
 ])
 
 ######### Créer les sections de la deuxième page ###########
-page2_layout = html.Div([
+page2_layout = html.Div([  
+    # Titre
     html.H1("Partie 2 - XXXX"),
-    dcc.Dropdown(
-        id='annee-dropdown-page2',
-        options=[
-            {'label': str(year), 'value': year} for year in sorted(df['Year'].unique())
-        ],
-        value=df['Year'].max()
-    ),
-    dcc.Graph(id='medailles-par-annee-page2'),
-    # Ajoutez d'autres composants spécifiques à la deuxième page
+    # Section Description
+    html.H2("Description", id='accueil'),
+    html.P("Bienvenue dans le tableau de bord des Jeux olympiques. Explorez les données et découvrez des informations intéressantes."),
     
+        
     #### Moyennes taille, poids et age par genre
     html.H1("Analyse des caractéristiques moyennes par sport et par année"),
 
@@ -202,22 +201,27 @@ page2_layout = html.Div([
 
 ######### Créer les sections de la troisième page ###########
 page3_layout = html.Div([
+    # Titre
     html.H1("Partie 3 - XXXX"),
+    # Section Description
+    html.H2("Description", id='accueil'),
+    html.P("Bienvenue dans le tableau de bord des Jeux olympiques. Explorez les données et découvrez des informations intéressantes."),
     
-    # Composants pour l'entrée utilisateur (exemple avec Age, Height, Weight)
     dcc.Input(id='input-age', type='number', placeholder='Age'),
     dcc.Input(id='input-height', type='number', placeholder='Height'),
     dcc.Input(id='input-weight', type='number', placeholder='Weight'),
-
-    # Bouton pour déclencher la prédiction
     html.Button('Prédire', id='predict-button'),
-
-    # Zone pour afficher la prédiction
-    html.Div(id='prediction-output'),
-
-    # Graphique des chances de médaille
-    dcc.Graph(id='medal-chances-graph')    
     
+    # Section pour Régression Logistique
+    html.H2("Régression Logistique", id='regression-logistique'),
+    html.Div(id='prediction-output-lr'),
+    dcc.Graph(id='probability-bar-chart-lr'),  # Graphique à barres pour la Régression Logistique
+    
+    # Section pour Random Forest
+    html.H2("Random Forest", id='random-forest'),
+    html.Div(id='prediction-output-rf'),
+    dcc.Graph(id='probability-bar-chart-rf'),  # Graphique à barres pour le Random Forest
+
 ])
 
 
@@ -361,12 +365,10 @@ def update_graphs(n_clicks):
 
 
 ####### Callback Page 3 ########
-# Callback pour la prédiction et le graphique des chances de médaille
+# Callback pour la prédiction avec affichage des probabilités sous forme de graphique à barres pour Régression Logistique
 @app.callback(
-    [
-        Output('prediction-output', 'children'),
-        Output('medal-chances-graph', 'figure')
-    ],
+    Output('prediction-output-lr', 'children'),
+    Output('probability-bar-chart-lr', 'figure'),
     [Input('predict-button', 'n_clicks')],
     [
         Input('input-age', 'value'),
@@ -374,38 +376,70 @@ def update_graphs(n_clicks):
         Input('input-weight', 'value')
     ]
 )
-def predict_medal(n_clicks, age, height, weight):
+def predict_medal_with_probabilities_and_chart_lr(n_clicks, age, height, weight):
     if n_clicks is None:
-        return '', px.scatter()
+        return '', {}
 
     # Préparer les données d'entrée pour la prédiction
     input_data = pd.DataFrame({'Age': [age], 'Height': [height], 'Weight': [weight]})
     input_data[['Age', 'Height', 'Weight']] = imputer.transform(input_data[['Age', 'Height', 'Weight']])
     input_data_scaled = scaler.transform(input_data)
 
-    # Faire la prédiction avec le modèle
-    prediction = model.predict_proba(input_data_scaled)
+    # Faire la prédiction avec le modèle Régression Logistique
+    prediction_proba_lr = best_lr_model.predict_proba(input_data_scaled)
 
-    # Trouver le sport avec la probabilité la plus élevée
-    sport_index = np.argmax(prediction)
-    sports = df['Sport'].unique()  # Utilisez les sports de votre ensemble de données
-    most_likely_sport = sports[sport_index]
+    # Convertir les indices en entiers
+    class_names_lr = ['No Medal', 'Bronze', 'Silver', 'Gold']
+    predicted_class_lr = int(best_lr_model.predict(input_data_scaled)[0])
 
-    # Afficher le résultat
-    prediction_text = f"Le sport le plus probable pour une médaille est : {most_likely_sport}"
+    # Afficher le résultat avec les noms des classes
+    prediction_str_lr = ', '.join([f"{class_names_lr[i]}: {prob:.4f}" for i, prob in enumerate(prediction_proba_lr[0])])
 
-    # Préparer les données pour le graphique des chances de médaille
-    medal_chances_data = {
-        'Médaille': ['Bronze', 'Silver', 'Gold'],
-        'Chances': prediction.flatten()
-    }
+    # Créer un graphique à barres avec les probabilités prédites pour Régression Logistique
+    fig_lr = px.bar(x=class_names_lr, y=prediction_proba_lr[0], labels={'x': 'Medal Class', 'y': 'Probability'},
+                    title='Probabilités prédites pour chaque classe (Régression Logistique)',
+                    color=class_names_lr, color_discrete_map={'No Medal': 'lightgray', 'Bronze': 'peru', 'Silver': 'silver', 'Gold': 'gold'})
 
-    # Créer le graphique
-    medal_chances_fig = px.bar(medal_chances_data, x='Médaille', y='Chances', labels={'Chances': 'Probabilité'})
-
-    return prediction_text, medal_chances_fig
+    return prediction_str_lr, fig_lr
 
 
+
+# Callback pour la prédiction avec affichage des probabilités sous forme de graphique à barres pour Random Forest
+@app.callback(
+    Output('prediction-output-rf', 'children'),
+    Output('probability-bar-chart-rf', 'figure'),
+    [Input('predict-button', 'n_clicks')],
+    [
+        Input('input-age', 'value'),
+        Input('input-height', 'value'),
+        Input('input-weight', 'value')
+    ]
+)
+def predict_medal_with_probabilities_and_chart_rf(n_clicks, age, height, weight):
+    if n_clicks is None:
+        return '', {}
+
+    # Préparer les données d'entrée pour la prédiction
+    input_data = pd.DataFrame({'Age': [age], 'Height': [height], 'Weight': [weight]})
+    input_data[['Age', 'Height', 'Weight']] = imputer.transform(input_data[['Age', 'Height', 'Weight']])
+    input_data_scaled = scaler.transform(input_data)
+
+    # Faire la prédiction avec le modèle Random Forest
+    prediction_proba_rf = best_rf_model.predict_proba(input_data_scaled)
+
+    # Convertir les indices en entiers
+    class_names_rf = ['No Medal', 'Bronze', 'Silver', 'Gold']
+    predicted_class_rf = int(best_rf_model.predict(input_data_scaled)[0])
+
+    # Afficher le résultat avec les noms des classes
+    prediction_str_rf = ', '.join([f"{class_names_rf[i]}: {prob:.4f}" for i, prob in enumerate(prediction_proba_rf[0])])
+
+    # Créer un graphique à barres avec les probabilités prédites pour Random Forest
+    fig_rf = px.bar(x=class_names_rf, y=prediction_proba_rf[0], labels={'x': 'Medal Class', 'y': 'Probability'},
+                    title='Probabilités prédites pour chaque classe (Random Forest)',
+                    color=class_names_rf, color_discrete_map={'No Medal': 'lightgray', 'Bronze': 'peru', 'Silver': 'silver', 'Gold': 'gold'})
+
+    return prediction_str_rf, fig_rf
 
     
 ##########  Test  ##########
